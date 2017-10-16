@@ -1,22 +1,6 @@
 class TycMessage < ApplicationRecord
   enum message_type: [:text, :image, :video]
 
-=begin
-  has_attached_file :image, storage: :s3,
-                    :path => 'tyc/:image_file_name',
-                    :processors => [:transcoder],
-                    :styles => {
-                     :mp4video => { :geometry => '520x390', :format => 'mp4',
-                                    :convert_options => { :output => { :vcodec => 'libx264', :b => '250k', :bt => '50k' } } } }
-
-  validates_attachment :image, :content_type => { :content_type => ["video/x-flv", "video/mp4", "video/ogg", "video/webm", "video/x-ms-wmv", "video/x-msvideo", "video/quicktime", "video/3gpp"] }
-
-
-  process_in_background :image
-=end
-
-
-  
   has_attached_file :image, storage: :s3,
                     :path => 'tyc/:styles/:image_file_name',
                     :styles => lambda {|a| a.instance.check_file_type},
@@ -38,7 +22,13 @@ class TycMessage < ApplicationRecord
   end
 
   def self.submit_thank_you_message(params)
-    message_type = :video
+    if params[:image_file].content_type =~ %r(video)
+      message_type = :video
+    elsif params[:image_file].content_type =~ %r(image)
+      message_type = :image
+    else
+      message_type = :text
+    end
     message_body = "#{params[:message_1]}||#{params[:message_2]}"
     thank_you_message = self.new({
                                     :uid => CommonUtils.generate_random_string(6),
@@ -73,6 +63,7 @@ class TycMessage < ApplicationRecord
       }
     end
   end
+  
   private
 
   def is_video?
