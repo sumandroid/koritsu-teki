@@ -3,16 +3,19 @@ class TycMessage < ApplicationRecord
 
   has_attached_file :image, storage: :s3,
                     :path => 'tyc/:styles/:image_file_name',
-                    :styles => lambda {|a| a.instance.check_file_type},
-                    :processors =>  lambda {|instance| (instance.message_type.eql? :image) ? '' : [:transcoder]}
+                    :styles => lambda {|a| a.instance.check_file_type}, #check file type and return the styles accordingly. Lambda is passed the attachment
+                    :processors =>  lambda {|instance| (instance.message_type.eql? :image) ? '' : [:transcoder]} #check the file type and return the processor accordingly. Lambda is passed the instance of the attachment.
 
 
 
+  #validates the input type, change accordingly as to which file types you want to handle.
   validates_attachment :image, :content_type => { :content_type => ["video/x-flv", "video/mp4", "video/ogg", "video/webm", "video/x-ms-wmv", "video/x-msvideo", "video/quicktime", "video/3gpp", 'image/jpeg', 'image/png'] }
 
 
+  #process the attachment in background using the delayed_paperclip gem
   process_in_background :image
 
+  #interpolates the file name accordingly
   Paperclip.interpolates :image_file_name do |attachment, style|
     attachment.instance.image_file_name
   end
@@ -63,7 +66,7 @@ class TycMessage < ApplicationRecord
       }
     end
   end
-  
+
   private
 
   def is_video?
